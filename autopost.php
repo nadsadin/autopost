@@ -1,5 +1,4 @@
 <?php
-include('simple_html_dom.php');
 function autop( $pee, $br = true ) {
 	$pre_tags = array();
 
@@ -548,7 +547,27 @@ function transliterate($st) {
   ));
   return $st;
 }
-
+function add_text_to_html($doc,$str){
+    $str = "<div id='nodes'>".$str."</div>";
+    $nodes = array();
+    $d = new DOMDocument();
+    $d->loadHTML($str);
+    $child = $d->getElementById('nodes')->firstChild;
+    while($child){
+        $nodes[] = $doc->importNode($child,true);
+        $child = $child->nextSibling;
+    }
+    $text_element = $doc->getElementById('text');
+    foreach ($nodes as $node){
+        $text_element->appendChild($node);
+    }
+    return $doc;
+}
+function add_title_to_html($doc,$title,$description,$keywords){
+    $doc->getElementsByTagName('title')->item(0)->nodeValue=$title;
+    $doc->getElementsByTagName('h1')->item(0)->nodeValue=$title;
+    return $doc;
+}
 function post(){
     $file = file_get_contents("text/1.txt");
     preg_match('|<text>(.*)</text>|Uis', $file, $atext);
@@ -557,15 +576,17 @@ function post(){
     preg_match('|<keywords>(.*)</keywords>|Uis', $file, $akeywords);
     $text = $atext[1];
     $description = $adescription[1];
-    $title = $atitle[0];
-    $keywords = $akeywords[0];
+    $title = $atitle[1];
+    $keywords = $akeywords[1];
+    $dir = "test"."/";
     $url = remove_accents($title);
-    $url = sanitize_title_with_dashes($url).'.html';
+    $url = $dir.sanitize_title_with_dashes($url).'.html';
     $text = autop($text);
-    $theme = file_get_html('theme/1.html');
-    $theme->find('div[id=text]',0)->innertext = $text;
-    $theme->save($url);
-    echo $url;
+    $dom = new DOMDocument();
+    $dom->loadHTMLFile('theme/1.html');
+    $dom = add_text_to_html($dom,$text);
+    $dom = add_title_to_html($dom, $title);
+    $dom->saveHTMLFile($url);
 }
 
 post();
