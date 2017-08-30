@@ -1,4 +1,5 @@
 <?php
+include('simple_html_dom.php');
 function autop( $pee, $br = true ) {
 	$pre_tags = array();
 
@@ -51,7 +52,7 @@ function autop( $pee, $br = true ) {
 	$pee = str_replace(array("\r\n", "\r"), "\n", $pee);
 
 	// Find newlines in all elements and add placeholders.
-	$pee = wp_replace_in_html_tags( $pee, array( "\n" => " <!-- wpnl --> " ) );
+	//$pee = wp_replace_in_html_tags( $pee, array( "\n" => " <!-- wpnl --> " ) );
 
 	// Collapse line breaks before and after <option> elements so they don't get autop'd.
 	if ( strpos( $pee, '<option' ) !== false ) {
@@ -485,6 +486,55 @@ function sanitize_title_with_dashes( $title, $raw_title = '', $context = 'save' 
 
 	return $title;
 }
+function utf8_uri_encode( $utf8_string, $length = 0 ) {
+    $unicode = '';
+    $values = array();
+    $num_octets = 1;
+    $unicode_length = 0;
+
+    mbstring_binary_safe_encoding();
+    $string_length = strlen( $utf8_string );
+    reset_mbstring_encoding();
+
+    for ($i = 0; $i < $string_length; $i++ ) {
+
+        $value = ord( $utf8_string[ $i ] );
+
+        if ( $value < 128 ) {
+            if ( $length && ( $unicode_length >= $length ) )
+                break;
+            $unicode .= chr($value);
+            $unicode_length++;
+        } else {
+            if ( count( $values ) == 0 ) {
+                if ( $value < 224 ) {
+                    $num_octets = 2;
+                } elseif ( $value < 240 ) {
+                    $num_octets = 3;
+                } else {
+                    $num_octets = 4;
+                }
+            }
+
+            $values[] = $value;
+
+            if ( $length && ( $unicode_length + ($num_octets * 3) ) > $length )
+                break;
+            if ( count( $values ) == $num_octets ) {
+                for ( $j = 0; $j < $num_octets; $j++ ) {
+                    $unicode .= '%' . dechex( $values[ $j ] );
+                }
+
+                $unicode_length += $num_octets * 3;
+
+                $values = array();
+                $num_octets = 1;
+            }
+        }
+    }
+
+    return $unicode;
+}
 function transliterate($st) {
   $st = strtr($st,
     "абвгдежзийклмнопрстуфыэАБВГДЕЖЗИЙКЛМНОПРСТУФЫЭ",
@@ -498,3 +548,24 @@ function transliterate($st) {
   ));
   return $st;
 }
+
+function post(){
+    $file = file_get_contents("text/1.txt");
+    preg_match('|<text>(.*)</text>|Uis', $file, $atext);
+    preg_match('|<title>(.*)</title>|Uis', $file, $atitle);
+    preg_match('|<description>(.*)</description>|Uis', $file, $adescription);
+    preg_match('|<keywords>(.*)</keywords>|Uis', $file, $akeywords);
+    $text = $atext[1];
+    $description = $adescription[1];
+    $title = $atitle[0];
+    $keywords = $akeywords[0];
+    $url = remove_accents($title);
+    $url = sanitize_title_with_dashes($url).'.html';
+    $text = autop($text);
+    $theme = file_get_html('theme/1.html');
+    $theme->find('div[id=text]',0)->innertext = $text;
+    $theme->save($url);
+    echo $url;
+}
+
+post();

@@ -1,15 +1,17 @@
-<title>Лучшая в мире херня</title>
-<description>Реально лучшая херня в мире</description>
-<keywords>лучшая, херня, в мире</keywords>
+<title>Best hernya in the world</title>
+<description>Really the best</description>
+<keywords>best, hernya, world</keywords>
 <text>
-Бла бла бла
-Рыба рыба рыба
+Lorem ipsum dolor
+
+Sit amet
 <ul>
     <li>Olololo</li>
     <li>lsjdgfv</li>
     <li>asdfvasdv</li>
     <li>azxcvsdv</li>
 </ul>
+
 Another fish
 else fish
 </text>
