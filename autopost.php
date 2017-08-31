@@ -563,9 +563,13 @@ function add_text_to_html($doc,$str){
     }
     return $doc;
 }
-function add_title_to_html($doc,$title,$description,$keywords){
+function add_meta_to_html($doc,$title,$description,$keywords){
     $doc->getElementsByTagName('title')->item(0)->nodeValue=$title;
     $doc->getElementsByTagName('h1')->item(0)->nodeValue=$title;
+    $metas = $doc->getElementsByTagName('meta');
+    foreach($metas as $meta){
+
+    }
     return $doc;
 }
 function post(){
@@ -585,7 +589,7 @@ function post(){
     $dom = new DOMDocument();
     $dom->loadHTMLFile('theme/1.html');
     $dom = add_text_to_html($dom,$text);
-    $dom = add_title_to_html($dom, $title);
+    $dom = add_meta_to_html($dom, $title,$description,$keywords);
     $dom->saveHTMLFile($url);
 }
 
