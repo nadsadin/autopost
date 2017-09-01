@@ -549,17 +549,16 @@ function transliterate($st) {
 }
 function add_text_to_html($doc,$str){
     $str = "<div id='nodes'>".$str."</div>";
-    $nodes = array();
     $d = new DOMDocument();
     $d->loadHTML($str);
     $child = $d->getElementById('nodes')->firstChild;
-    while($child){
-        $nodes[] = $doc->importNode($child,true);
-        $child = $child->nextSibling;
-    }
     $text_element = $doc->getElementById('text');
-    foreach ($nodes as $node){
-        $text_element->appendChild($node);
+    if($text_element!==NULL){
+        while($child){
+            $node = $doc->importNode($child,true);
+            $child = $child->nextSibling;
+            $text_element->appendChild($node);
+        }
     }
     return $doc;
 }
@@ -568,7 +567,12 @@ function add_meta_to_html($doc,$title,$description,$keywords){
     $doc->getElementsByTagName('h1')->item(0)->nodeValue=$title;
     $metas = $doc->getElementsByTagName('meta');
     foreach($metas as $meta){
-
+        if($meta->getAttribute('name')=="keywords")$meta->setAttribute('content',$keywords);
+        if($meta->getAttribute('name')=="description")$meta->setAttribute('content',$description);
+        if($meta->getAttribute('name')=="twitter:title")$meta->setAttribute('content',$title);
+        if($meta->getAttribute('name')=="twitter:description")$meta->setAttribute('content',$description);
+        if($meta->getAttribute('name')=="og:title")$meta->setAttribute('content',$title);
+        if($meta->getAttribute('name')=="og:description")$meta->setAttribute('content',$description);
     }
     return $doc;
 }
@@ -592,5 +596,8 @@ function post(){
     $dom = add_meta_to_html($dom, $title,$description,$keywords);
     $dom->saveHTMLFile($url);
 }
-
-post();
+function main(){
+    $settings = new DOMDocument();
+    $settings->load('autopost-settings.xml');
+}
+main();
