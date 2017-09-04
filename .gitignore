@@ -1,3 +1,6 @@
 .idea/*
 .git/*
 test/*
+text/*
+theme/*
+sitemap.js

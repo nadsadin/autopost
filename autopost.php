@@ -576,28 +576,89 @@ function add_meta_to_html($doc,$title,$description,$keywords){
     }
     return $doc;
 }
-function post(){
-    $file = file_get_contents("text/1.txt");
-    preg_match('|<text>(.*)</text>|Uis', $file, $atext);
-    preg_match('|<title>(.*)</title>|Uis', $file, $atitle);
-    preg_match('|<description>(.*)</description>|Uis', $file, $adescription);
-    preg_match('|<keywords>(.*)</keywords>|Uis', $file, $akeywords);
-    $text = $atext[1];
-    $description = $adescription[1];
-    $title = $atitle[1];
-    $keywords = $akeywords[1];
-    $dir = "test"."/";
-    $url = remove_accents($title);
-    $url = $dir.sanitize_title_with_dashes($url).'.html';
-    $text = autop($text);
-    $dom = new DOMDocument();
-    $dom->loadHTMLFile('theme/1.html');
-    $dom = add_text_to_html($dom,$text);
-    $dom = add_meta_to_html($dom, $title,$description,$keywords);
-    $dom->saveHTMLFile($url);
+
+function value_of($dom,$tag_name){
+    return $dom->getElementsByTagName($tag_name)->item(0)->nodeValue;
+}
+function post($settings){
+    $log_time = new DateTime();
+    $log_text = '='.$log_time->format(DATE_W3C).' - ';
+    $source = value_of($settings,'text_path').value_of($settings,'post_num').'.txt';
+    $file = file_get_contents($source);
+    if($file!=FALSE){
+        //get data from file
+        preg_match('|<text>(.*)</text>|Uis', $file, $atext);
+        preg_match('|<title>(.*)</title>|Uis', $file, $atitle);
+        preg_match('|<description>(.*)</description>|Uis', $file, $adescription);
+        preg_match('|<keywords>(.*)</keywords>|Uis', $file, $akeywords);
+        $text = $atext[1];
+        $description = $adescription[1];
+        $title = $atitle[1];
+        $keywords = $akeywords[1];
+        $dir = value_of($settings,'result_path');
+        $url = remove_accents($title);
+        $url = $dir.sanitize_title_with_dashes($url).'.html';//set url with sanitized title as name
+        $text = autop($text);
+        $post_time = new DateTime('now',new DateTimeZone('+0000'));
+        //if post time !=0 and diff between now and post time less then 30 min then set time from settings
+        if((value_of($settings,'post_time')!=0)&&($post_time->getTimestamp()-value_of($settings,'post_time')<60*30)){
+            $post_time->setTimestamp(value_of($settings,'post_time'));
+        }
+        $text = '<time datetime="'.$post_time->format(DATE_W3C).'">'.$post_time->format("M d, Y").'</time>'.$text;
+        $theme_num = random_int(1,value_of($settings,'theme_num'));
+        $theme_path = value_of($settings,'theme_path').$theme_num.'.html';
+        $dom = new DOMDocument();
+        if($dom->loadHTMLFile($theme_path)){
+            $dom = add_text_to_html($dom,$text);
+            $dom = add_meta_to_html($dom, $title,$description,$keywords);
+            //try to save result
+            if($dom->saveHTMLFile($url)!=FALSE){
+                //create custom period
+                $custom_period = random_int(value_of($settings,'period_min')*60*60*24,value_of($settings,'period_max')*60*60*24);
+                //create next post time
+                $post_time->add(new DateInterval('PT'.$custom_period.'S'));
+                //save link to sitemap
+                $sitemap = file_get_contents('sitemap.js');
+                $new_position = '<li><a href="'.$url.'">'.$title.'</a></li> \
+</ul>';
+                $sitemap = preg_replace('/<\/ul>/',$new_position,$sitemap);
+                file_put_contents('sitemap.js',$sitemap);
+                $next_text = value_of($settings,'post_num')+1;
+                //update settings
+                $settings->getElementsByTagName('post_time')->item(0)->nodeValue = $post_time->getTimestamp();
+                $settings->getElementsByTagName('post_num')->item(0)->nodeValue = $next_text;
+                $settings->save('autopost-settings.xml');
+                $log_text.= 'Файл результата: '.$url.' тема: '.$theme_path.' следующий текст: '.$next_text.'.txt Время следующего поста: '.$post_time->format(DATE_W3C);
+            }else{
+                $log_text.= ' Файл результата не удалось сохранить '.$url;
+            }
+        }else{
+            $log_text.= ' Не удалось загрузить файл темы '.$theme_path;
+        }
+    }
+    else{
+        $log_text.= 'Файл источник не удалось загрузить по пути '.$source;
+    }
+    $log_text .= '
+';
+    file_put_contents('autopost-log.txt',$log_text,FILE_APPEND);
 }
 function main(){
     $settings = new DOMDocument();
-    $settings->load('autopost-settings.xml');
+    if($settings->load('autopost-settings.xml')){
+        $post_time = new DateTime('now -1 hour',new DateTimeZone('+0000'));
+        if(value_of($settings,'post_time')!=0){
+            $post_time->setTimestamp(value_of($settings,'post_time'));
+        }
+        $time = new DateTime('now',new DateTimeZone('+0000'));
+        if($time>$post_time){
+            post($settings);
+        }
+    }else{
+        $time = new DateTime();
+        $log = '='.$time->format(DATE_W3C).' - Не удалось загрузить файл настроек
+';
+        file_put_contents('autopost-log.txt',$log,FILE_APPEND);
+    }
 }
 main();
